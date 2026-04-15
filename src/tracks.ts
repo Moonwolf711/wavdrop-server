@@ -1,10 +1,14 @@
 import { FastifyInstance, FastifyRequest } from 'fastify'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { pool } from './db.js'
 import { config } from './config.js'
 import { s3 } from './s3.js'
 import ffmpeg from 'fluent-ffmpeg'
 import { Readable } from 'node:stream'
+import { aubioAnalyze } from './analyze-py.js'
 
 export async function trackRoutes(fastify: FastifyInstance) {
   // Multipart WAV upload
@@ -119,10 +123,22 @@ export async function trackRoutes(fastify: FastifyInstance) {
         bit_depth = numOrNull(audio?.bits_per_sample)
       }
 
-      // BPM/key: stub values until aubio worker lands
-      const bpm = 120 + Math.random() * 20
-      const keys = ['C', 'G', 'D', 'A', 'E', 'Am', 'Em', 'Dm']
-      const musical_key = keys[Math.floor(Math.random() * keys.length)]
+      // Real BPM/key via aubio (falls back to null if venv absent)
+      const tmp = path.join(os.tmpdir(), `analyze-${crypto.randomUUID()}.wav`)
+      let bpm: number | null = null
+      let musical_key: string | null = null
+      try {
+        const obj = await s3.getObject(config.s3.bucketTracks, rows[0].s3_key)
+        await new Promise<void>((resolve, reject) => {
+          const w = fs.createWriteStream(tmp)
+          obj.pipe(w).on('finish', () => resolve()).on('error', reject)
+        })
+        const a = await aubioAnalyze(tmp)
+        bpm = a.bpm
+        musical_key = a.key
+      } finally {
+        fs.promises.unlink(tmp).catch(() => {})
+      }
 
       await pool.query(
         `UPDATE tracks SET bpm=$1, musical_key=$2, duration_s=$3, sample_rate=$4,
