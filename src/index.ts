@@ -32,7 +32,7 @@ async function main() {
   })
 
   app.get('/health', async () => ({ ok: true, service: 'wavdrop-server', ts: Date.now() }))
-  app.get('/', async () => ({ service: 'wavdrop-server', version: '0.1.1-hooktest' }))
+  app.get('/', async () => ({ service: 'wavdrop-server', version: '0.1.0' }))
 
   await app.register(authRoutes)
   await app.register(trackRoutes)
