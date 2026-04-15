@@ -1,0 +1,15 @@
+[Unit]
+Description=MinIO S3 storage
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Environment=MINIO_ROOT_USER=wavdrop_minio
+Environment=MINIO_ROOT_PASSWORD=wavdrop_minio_secret_2026
+ExecStart=/usr/local/bin/minio server /var/lib/minio --address :9000 --console-address :9001
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=WavDrop Server
+After=network.target postgresql.service redis-server.service minio.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/wavdrop-server
+ExecStart=/usr/bin/node --import tsx/esm src/index.ts
+EnvironmentFile=/opt/wavdrop-server/.env
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
